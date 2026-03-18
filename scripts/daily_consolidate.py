@@ -21,7 +21,7 @@ Output-Validation:
 
 Cron: täglich 23:05 (nach reindex, vor pattern_counter)
 """
-import subprocess, sys
+import subprocess
 from datetime import date
 from pathlib import Path
 
@@ -32,11 +32,12 @@ TODAY    = date.today().isoformat()
 
 def main():
     if not HISTORY.exists():
-        print("[consolidate] HISTORY.md nicht gefunden"); return
+        print("[consolidate] HISTORY.md nicht gefunden")
+        return
 
     today_lines = [
-        l for l in HISTORY.read_text().splitlines()
-        if l.startswith(TODAY)
+        line for line in HISTORY.read_text().splitlines()
+        if line.startswith(TODAY)
     ]
 
     if len(today_lines) < 3:
@@ -52,12 +53,18 @@ def main():
 
     result = subprocess.run(
         [str(LLM_CALL), prompt, "800"],
-        capture_output=True, text=True, timeout=60
+        capture_output=True,
+        text=True,
+        timeout=70,
     )
 
     if result.returncode != 0 or not result.stdout.strip():
-        print("[consolidate] LLM nicht erreichbar — Template-Fallback")
-        summary = f"## Events\n" + "\n".join(f"- {l}" for l in today_lines[:20])
+        # llm_call.sh logs stderr and retry details to ~/.nanobot/logs/llm_call.log
+        print(
+            "[consolidate] LLM nicht erreichbar/leer — Template-Fallback "
+            f"(rc={result.returncode})"
+        )
+        summary = "## Events\n" + "\n".join(f"- {line}" for line in today_lines[:20])
     else:
         summary = result.stdout.strip()
 
