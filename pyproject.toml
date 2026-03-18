@@ -1,0 +1,14 @@
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+exclude = ["scripts"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = [
+  "E501", # line length handled separately / legacy scripts
+]
+
+[tool.pytest.ini_options]
+addopts = "-q"
+testpaths = ["tests"]
