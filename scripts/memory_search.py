@@ -31,6 +31,8 @@ import argparse, subprocess, sys, os, json
 from datetime import datetime
 from pathlib import Path
 
+from flags import load_flags
+
 REPO = Path.home() / ".nanobot/workspace/memory_repo"
 LOG  = Path.home() / ".nanobot/memory_search.log"
 
@@ -185,6 +187,10 @@ def log_search(query: str, result_files: list[str]):
             fh.write(f"{ts} {query} → {f}\n")
 
 def main():
+    if not load_flags().search:
+        print("[memory_search] disabled via LAMBS_SEARCH_ENABLED=0")
+        return
+
     parser = argparse.ArgumentParser()
     parser.add_argument("query", nargs="?", default="")
     parser.add_argument("--top", type=int, default=8)

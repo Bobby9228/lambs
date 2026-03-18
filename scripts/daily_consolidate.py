@@ -21,9 +21,11 @@ Output-Validation:
 
 Cron: täglich 23:05 (nach reindex, vor pattern_counter)
 """
-import subprocess, sys
+import subprocess
 from datetime import date
 from pathlib import Path
+
+from flags import load_flags
 
 HISTORY  = Path.home() / ".nanobot/workspace/memory/HISTORY.md"
 REPO     = Path.home() / ".nanobot/workspace/memory_repo"
@@ -31,12 +33,17 @@ LLM_CALL = Path.home() / ".nanobot/scripts/llm_call.sh"
 TODAY    = date.today().isoformat()
 
 def main():
+    if not load_flags().consolidate:
+        print("[consolidate] disabled via LAMBS_CONSOLIDATE_ENABLED=0")
+        return
+
     if not HISTORY.exists():
-        print("[consolidate] HISTORY.md nicht gefunden"); return
+        print("[consolidate] HISTORY.md nicht gefunden")
+        return
 
     today_lines = [
-        l for l in HISTORY.read_text().splitlines()
-        if l.startswith(TODAY)
+        line for line in HISTORY.read_text().splitlines()
+        if line.startswith(TODAY)
     ]
 
     if len(today_lines) < 3:
