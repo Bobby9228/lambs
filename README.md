@@ -59,6 +59,7 @@ memory_repo/
 - Architecture: docs/architecture.md
 - Security model: docs/security.md
 - Ops & Cron: docs/ops-cron.md
+- Nanobot dependency + LLM bridge contract: docs/nanobot.md
 - Phase 6 (semantic / sqlite-vec): docs/phase6-semantic.md
 - Changelog: CHANGELOG.md
 

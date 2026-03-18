@@ -24,13 +24,15 @@ Idempotent installation is handled by `scripts/install_cron.sh`.
 
 LAMBS assumes a working **nanobot** installation (or compatible agent runtime) on the host.
 
+Details: see `docs/nanobot.md`.
+
 ### LLM bridge
 
 Scripts that require an LLM call do **not** use `OPENAI_API_KEY` directly. Instead they call:
 
 - `scripts/llm_call.sh`
 
-The contract should be:
+Contract (summary):
 - prompt in, text out (stdout)
 - non-zero exit code on failure
 - bounded runtime (timeout)
