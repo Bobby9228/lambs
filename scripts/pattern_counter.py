@@ -9,9 +9,10 @@ Drei Kernfunktionen:
 
 Cron: täglich 23:10 (nach daily_consolidate, vor alerts_generator)
 """
-import re, subprocess, json
+import re
+import subprocess
 from collections import defaultdict
-from datetime import date, timedelta, datetime
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 HISTORY    = Path.home() / ".nanobot/workspace/memory/HISTORY.md"
@@ -33,7 +34,7 @@ TAG_GROUPS = {
 def load_history_entries() -> list[str]:
     if not HISTORY.exists():
         return []
-    return [l for l in HISTORY.read_text().splitlines() if l[:10] >= CUTOFF and l.strip()]
+    return [line for line in HISTORY.read_text().splitlines() if line[:10] >= CUTOFF and line.strip()]
 
 def heuristic_cluster(entries: list[str]) -> dict[str, list[str]]:
     """Gruppiert HISTORY-Einträge anhand von TAG_GROUPS-Keywords (ML-frei)."""
@@ -76,9 +77,15 @@ def generate_proposal(group: str, cluster: list[str]) -> str:
     try:
         result = subprocess.run(
             [str(LLM_CALL), prompt, "500"],
-            capture_output=True, text=True, timeout=60
+            capture_output=True,
+            text=True,
+            timeout=70,
         )
         if result.returncode != 0 or not result.stdout.strip():
+            print(
+                f"[pattern_counter] LLM bridge failed/empty for group '{group}' "
+                f"(rc={result.returncode}) — Template-Fallback"
+            )
             return fallback
         return result.stdout.strip()
     except subprocess.TimeoutExpired:
