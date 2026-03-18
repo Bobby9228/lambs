@@ -1,0 +1,8 @@
+# LAMBS feature flags
+# Use 0/1 only. Invalid values will be warned and defaults will apply.
+
+LAMBS_SEARCH_ENABLED=1      # memory_search.py
+LAMBS_WRITE_ENABLED=1       # memory_write_*.py
+LAMBS_CONSOLIDATE_ENABLED=1 # daily_consolidate.py
+LAMBS_PATTERN_ENABLED=1     # pattern_counter.py
+LAMBS_SEMANTIC_ENABLED=0    # Phase 6 (sqlite-vec / semantic)

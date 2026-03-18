@@ -25,12 +25,18 @@ import subprocess
 from datetime import date
 from pathlib import Path
 
+from flags import load_flags
+
 HISTORY  = Path.home() / ".nanobot/workspace/memory/HISTORY.md"
 REPO     = Path.home() / ".nanobot/workspace/memory_repo"
 LLM_CALL = Path.home() / ".nanobot/scripts/llm_call.sh"
 TODAY    = date.today().isoformat()
 
 def main():
+    if not load_flags().consolidate:
+        print("[consolidate] disabled via LAMBS_CONSOLIDATE_ENABLED=0")
+        return
+
     if not HISTORY.exists():
         print("[consolidate] HISTORY.md nicht gefunden")
         return

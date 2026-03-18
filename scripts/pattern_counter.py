@@ -15,6 +15,8 @@ from collections import defaultdict
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
+from flags import load_flags
+
 HISTORY    = Path.home() / ".nanobot/workspace/memory/HISTORY.md"
 REPO       = Path.home() / ".nanobot/workspace/memory_repo"
 SEARCH_LOG = Path.home() / ".nanobot/memory_search.log"
@@ -151,6 +153,10 @@ def co_occurrence_tracking():
         print(f"[pattern_counter] {len(significant)} Co-Occurrence(s) — Index-Update in Phase 6")
 
 def main():
+    if not load_flags().pattern:
+        print("[pattern_counter] disabled via LAMBS_PATTERN_ENABLED=0")
+        return
+
     print(f"[pattern_counter] Start {TODAY} (heuristic mode — ML aktiviert in Phase 6)")
     entries = load_history_entries()
     print(f"[pattern_counter] {len(entries)} Einträge der letzten 30 Tage")
