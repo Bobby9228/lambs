@@ -1,0 +1,6 @@
+# QUARANTINE/ enthält LLM-Outputs die Validation nicht bestanden haben.
+# Diese sollen NICHT in der Git-History landen.
+QUARANTINE/
+
+# macOS
+.DS_Store

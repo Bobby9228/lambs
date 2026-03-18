@@ -1,0 +1,20 @@
+# Agent Memory
+<!-- AUTO-GENERATED BLOCK: stub_update.py — nicht manuell editieren -->
+Kanonisches Memory: ~/.nanobot/workspace/memory_repo/
+
+Für Fakten/Entscheidungen/Runbooks:
+  exec python3 ~/.nanobot/scripts/memory_search.py "<query>" --top 8
+
+Für heutige Events:
+  grep -i "<query>" ~/.nanobot/workspace/memory/HISTORY.md | tail -20
+
+Für Überblick:
+  cat ~/.nanobot/workspace/memory_repo/INDEX.md
+
+## Aktuelle Kernfakten (auto-generiert aus CURRENT/stack.md)
+- agent_port: <port>
+- main_agent_container: <container-name>
+- vps_provider: <provider>
+- llm_provider: <llm-provider>
+- interface: <interface>
+<!-- END AUTO-GENERATED BLOCK -->

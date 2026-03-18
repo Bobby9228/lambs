@@ -1,0 +1,8 @@
+# LAMBS .gitignore
+
+# Niemals ins Repo:
+*.key           # restic backup passwords
+*.backup        # MEMORY.md backups
+__pycache__/
+*.pyc
+.DS_Store

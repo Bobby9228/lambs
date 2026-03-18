@@ -1,0 +1,12 @@
+# LAMBS Feature Flags
+# Aktiviere/deaktiviere LAMBS-Funktionen ohne Code-Änderung.
+# Alle Scripts lesen diese Datei beim Start.
+#
+# Für Read-only Phase (Stabilisierung): LAMBS_WRITE_ENABLED=0 setzen
+# Für Phase 6 Aktivierung: LAMBS_SEMANTIC_ENABLED=1 setzen
+
+LAMBS_SEARCH_ENABLED=1      # memory_search.py aktiv
+LAMBS_WRITE_ENABLED=1       # memory_write_*.py aktiv
+LAMBS_CONSOLIDATE_ENABLED=1 # daily_consolidate.py aktiv
+LAMBS_PATTERN_ENABLED=1     # pattern_counter.py aktiv
+LAMBS_SEMANTIC_ENABLED=0    # sqlite-vec — erst Phase 6 auf 1 setzen
