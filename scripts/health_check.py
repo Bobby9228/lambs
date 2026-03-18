@@ -22,7 +22,7 @@ Prüf-Regeln:
 Cron: täglich um 08:30 (Tagesstart — Probleme der Nacht sichtbar machen)
 """
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 LOGS   = Path.home() / ".nanobot/logs"
@@ -37,11 +37,6 @@ def check_freshness(name: str, path: Path, max_hours: int) -> str | None:
     """
     Prüft ob eine last_success-Datei innerhalb des erlaubten Alters liegt.
 
-    Args:
-        name:      Komponentenname für die Fehlermeldung
-        path:      Pfad zur last_success-Datei
-        max_hours: Maximales erlaubtes Alter in Stunden
-
     Returns:
         None wenn OK, Fehlermeldung als String wenn zu alt oder nicht vorhanden.
     """
@@ -49,7 +44,11 @@ def check_freshness(name: str, path: Path, max_hours: int) -> str | None:
         return f"[health] {name}: last_success fehlt — noch nie gelaufen?"
     try:
         ts = datetime.fromisoformat(path.read_text().strip())
-        age = datetime.now() - ts
+        # Support naive + aware timestamps
+        if ts.tzinfo is None:
+            ts = ts.replace(tzinfo=timezone.utc)
+        now = datetime.now(timezone.utc)
+        age = now - ts
         if age > timedelta(hours=max_hours):
             hours = int(age.total_seconds()) // 3600
             return f"[health] {name}: letzter Erfolg vor {hours}h (Limit: {max_hours}h)"
