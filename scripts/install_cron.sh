@@ -57,7 +57,7 @@ EOF
 )
 
 # Bestehenden LAMBS-Block entfernen, neuen einfügen
-EXISTING=$(crontab -l 2>/dev/null | awk '/^# BEGIN LAMBS/{skip=1} /^# END LAMBS/{skip=0; next} !skip')
+EXISTING=$((crontab -l 2>/dev/null || true) | awk '/^# BEGIN LAMBS/{skip=1} /^# END LAMBS/{skip=0; next} !skip')
 printf '%s\n%s\n' "$EXISTING" "$NEW_BLOCK" | crontab -
 echo "[install_cron] Cron installiert:"
 crontab -l | awk '/^# BEGIN LAMBS/,/^# END LAMBS/'
