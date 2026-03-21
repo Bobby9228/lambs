@@ -27,7 +27,7 @@ restic --repo /var/backups/lambs-memory \
        --password-file "$RESTIC_PASSWORD_FILE" \
        backup \
        "$HOME/.nanobot/workspace/memory_repo" \
-       "$HOME/.nanobot/workspace/MEMORY.md" \
+       "$HOME/.nanobot/workspace/memory/MEMORY.md" \
        --tag lambs \
        --quiet
 

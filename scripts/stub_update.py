@@ -19,8 +19,13 @@ Sicherheits-Invariante:
 from pathlib import Path
 import re
 
-REPO    = Path.home() / ".nanobot/workspace/memory_repo"
-STUB    = Path.home() / ".nanobot/workspace/MEMORY.md"
+WORKSPACE = Path.home() / ".nanobot/workspace"
+REPO      = WORKSPACE / "memory_repo"
+
+# Canonical location for the injected MEMORY.md stub.
+# Jakob decision (21. März 2026): root stub path is deprecated/removed.
+STUB = WORKSPACE / "memory" / "MEMORY.md"
+
 STACK   = REPO / "CURRENT/stack.md"
 MAX_LINES = 50
 
@@ -76,6 +81,7 @@ def run():
         )
 
     stub_text = STUB.read_text()
+
     updated = re.sub(
         r"<!-- AUTO-GENERATED BLOCK.*?<!-- END AUTO-GENERATED BLOCK -->",
         new_block,
@@ -89,8 +95,10 @@ def run():
             f"MEMORY.md hätte {len(lines)} Zeilen — Maximum ist {MAX_LINES}! Write abgebrochen."
         )
 
+    STUB.parent.mkdir(parents=True, exist_ok=True)
     STUB.write_text(updated)
-    print(f"[stub_update] MEMORY.md aktualisiert ({len(lines)} Zeilen)")
+
+    print(f"[stub_update] MEMORY.md aktualisiert ({len(lines)} Zeilen) → {STUB}")
 
 if __name__ == "__main__":
     run()
