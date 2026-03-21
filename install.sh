@@ -62,16 +62,21 @@ else
     warn ".lambs_flags existiert bereits — nicht überschrieben."
 fi
 
-# --- MEMORY.md Stub ---
-if [ ! -f "$WORKSPACE/MEMORY.md" ]; then
-    info "MEMORY.md Stub anlegen..."
-    cp "$LAMBS_DIR/MEMORY.md.stub" "$WORKSPACE/MEMORY.md"
+# --- MEMORY.md Stub (canonical: workspace/memory/MEMORY.md) ---
+mkdir -p "$WORKSPACE/memory"
+
+if [ ! -f "$WORKSPACE/memory/MEMORY.md" ]; then
+    info "MEMORY.md Stub anlegen unter $WORKSPACE/memory/MEMORY.md ..."
+    cp "$LAMBS_DIR/MEMORY.md.stub" "$WORKSPACE/memory/MEMORY.md"
 else
-    warn "MEMORY.md existiert bereits — nicht überschrieben."
+    warn "MEMORY.md existiert bereits — nicht überschrieben ($WORKSPACE/memory/MEMORY.md)."
     BACKUP_TS=$(date '+%Y%m%d_%H%M%S')
-    warn "Backup liegt unter: $WORKSPACE/MEMORY.md.backup.$BACKUP_TS"
-    cp "$WORKSPACE/MEMORY.md" "$WORKSPACE/MEMORY.md.backup.$BACKUP_TS"
+    warn "Backup liegt unter: $WORKSPACE/memory/MEMORY.md.backup.$BACKUP_TS"
+    cp "$WORKSPACE/memory/MEMORY.md" "$WORKSPACE/memory/MEMORY.md.backup.$BACKUP_TS"
 fi
+
+# Root-Stub ($WORKSPACE/MEMORY.md) ist absichtlich deprecated und wird nicht angelegt.
+# (siehe docs/architecture.md + scripts/stub_update.py)
 
 # --- Memory Repo klonen ---
 if [ ! -d "$REPO_DIR/.git" ]; then

@@ -20,7 +20,7 @@ Goal: give a nanobot-style agent long-term memory that **doesn’t flood prompt 
      - `UPCOMING/` (dated reminders)
 
 3. **Retrieval (no context flood)**
-   - Local `MEMORY.md` becomes a **stub** pointing to tools.
+   - Local `~/.nanobot/workspace/memory/MEMORY.md` becomes a **stub** pointing to tools.
    - `memory_search.py` returns **top-k snippets** with a hard budget.
 
 4. **Skill evolution (self-learning, controlled)**
