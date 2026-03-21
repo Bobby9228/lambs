@@ -19,8 +19,16 @@ Sicherheits-Invariante:
 from pathlib import Path
 import re
 
-REPO    = Path.home() / ".nanobot/workspace/memory_repo"
-STUB    = Path.home() / ".nanobot/workspace/MEMORY.md"
+WORKSPACE = Path.home() / ".nanobot/workspace"
+REPO      = WORKSPACE / "memory_repo"
+
+# Nanobot-/Agent-Frameworks unterscheiden sich darin, wo sie die injizierte
+# MEMORY.md suchen. Manche erwarten sie direkt im Workspace, andere unter
+# workspace/memory/. Damit LAMBS robust bleibt, halten wir beide Pfade synchron.
+STUB_PRIMARY = WORKSPACE / "MEMORY.md"
+STUB_MIRROR  = WORKSPACE / "memory" / "MEMORY.md"
+STUB_TARGETS = [STUB_PRIMARY, STUB_MIRROR]
+
 STACK   = REPO / "CURRENT/stack.md"
 MAX_LINES = 50
 
@@ -66,16 +74,26 @@ def run():
         "<!-- END AUTO-GENERATED BLOCK -->",
     ])
 
-    if not STUB.exists():
+    # Wähle eine existierende Stub-Datei als Source (primary bevorzugt),
+    # damit manuelle Ergänzungen nicht verloren gehen.
+    source = None
+    for p in (STUB_PRIMARY, STUB_MIRROR):
+        if p.exists():
+            source = p
+            break
+
+    if source is None:
         print("[stub_update] MEMORY.md nicht gefunden — wird neu angelegt")
-        STUB.parent.mkdir(parents=True, exist_ok=True)
-        STUB.write_text(
+        STUB_PRIMARY.parent.mkdir(parents=True, exist_ok=True)
+        STUB_PRIMARY.write_text(
             "# Agent Memory\n"
             "<!-- AUTO-GENERATED BLOCK: stub_update.py — nicht manuell editieren -->\n"
             "<!-- END AUTO-GENERATED BLOCK -->\n"
         )
+        source = STUB_PRIMARY
 
-    stub_text = STUB.read_text()
+    stub_text = source.read_text()
+
     updated = re.sub(
         r"<!-- AUTO-GENERATED BLOCK.*?<!-- END AUTO-GENERATED BLOCK -->",
         new_block,
@@ -89,8 +107,12 @@ def run():
             f"MEMORY.md hätte {len(lines)} Zeilen — Maximum ist {MAX_LINES}! Write abgebrochen."
         )
 
-    STUB.write_text(updated)
-    print(f"[stub_update] MEMORY.md aktualisiert ({len(lines)} Zeilen)")
+    # Schreibe in beide möglichen Locations (primary + mirror)
+    for target in STUB_TARGETS:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(updated)
+
+    print(f"[stub_update] MEMORY.md aktualisiert ({len(lines)} Zeilen) → {', '.join(str(p) for p in STUB_TARGETS)}")
 
 if __name__ == "__main__":
     run()

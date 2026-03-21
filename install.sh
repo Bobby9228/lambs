@@ -73,6 +73,19 @@ else
     cp "$WORKSPACE/MEMORY.md" "$WORKSPACE/MEMORY.md.backup.$BACKUP_TS"
 fi
 
+# Einige Agent-Frameworks lesen die injizierte MEMORY.md unter workspace/memory/.
+# Wir spiegeln/symlinken daher die Stub-Datei dorthin, ohne bestehende Dateien
+# zu zerstören.
+mkdir -p "$WORKSPACE/memory"
+if [ ! -f "$WORKSPACE/memory/MEMORY.md" ]; then
+    info "MEMORY.md Mirror anlegen unter $WORKSPACE/memory/MEMORY.md ..."
+    # Symlink bevorzugt (eine Quelle), fällt bei Problemen automatisch auf Copy zurück
+    ln -s ../MEMORY.md "$WORKSPACE/memory/MEMORY.md" 2>/dev/null \
+      || cp "$WORKSPACE/MEMORY.md" "$WORKSPACE/memory/MEMORY.md"
+else
+    warn "MEMORY.md Mirror existiert bereits — nicht überschrieben ($WORKSPACE/memory/MEMORY.md)."
+fi
+
 # --- Memory Repo klonen ---
 if [ ! -d "$REPO_DIR/.git" ]; then
     info "Memory Repo klonen: git@github.com:$GITHUB_USER/agent-memory.git"
