@@ -17,15 +17,15 @@ Seiteneffekte:
   Das Log wird von pattern_counter.py täglich ausgewertet.
 
 Phase 6 Upgrade:
-  --reindex und --reindex-file sind als Platzhalter implementiert.
-  Volle sqlite-vec Hybrid-Suche wird in Phase 6 aktiviert.
+  Optionaler Semantic-Index via sqlite-vec + sentence-transformers.
+  Aktiviert über LAMBS_SEMANTIC_ENABLED=1.
 
 Aufruf:
   memory_search.py "deploy failed" --top 8
   memory_search.py "nanobot port" --top 3 --grep-only
   memory_search.py "restart" --top 5 --expand-hops 2
-  memory_search.py --reindex          (Phase 6)
-  memory_search.py --reindex-file CURRENT/stack.md  (Phase 6)
+  memory_search.py --reindex
+  memory_search.py --reindex-file CURRENT/stack.md
 """
 import argparse, subprocess, sys, os, json
 from datetime import datetime
@@ -186,6 +186,156 @@ def log_search(query: str, result_files: list[str]):
         with LOG.open("a") as fh:
             fh.write(f"{ts} {query} → {f}\n")
 
+def _try_semantic_deps():
+    """Lazy import semantic deps. Returns (ok, errstr, modules)."""
+    try:
+        import sqlite3  # noqa: F401
+        import sqlite_vec  # type: ignore
+        import numpy as np  # type: ignore
+        from sentence_transformers import SentenceTransformer  # type: ignore
+        return True, "", (sqlite3, sqlite_vec, np, SentenceTransformer)
+    except Exception as e:  # pragma: no cover
+        return False, str(e), None
+
+
+def _semantic_db_path() -> Path:
+    return REPO / ".lambs" / "semantic.sqlite3"
+
+
+def _semantic_model_name() -> str:
+    # Keep it small + widely available.
+    return os.environ.get("LAMBS_SEMANTIC_MODEL", "sentence-transformers/all-MiniLM-L6-v2")
+
+
+def _semantic_embed(text: str, SentenceTransformer):
+    model = SentenceTransformer(_semantic_model_name())
+    # normalize_embeddings => cosine similarity via L2 distance
+    emb = model.encode([text], normalize_embeddings=True)
+    return emb[0]
+
+
+def semantic_reindex(paths: list[Path] | None = None) -> int:
+    """(Phase 6) Build/update semantic index. Returns number of indexed docs."""
+    flags = load_flags()
+    if not flags.semantic:
+        print("[memory_search] semantic disabled via LAMBS_SEMANTIC_ENABLED=0")
+        return 0
+
+    ok, err, mods = _try_semantic_deps()
+    if not ok:
+        print(f"[memory_search] semantic deps missing: {err}")
+        return 0
+
+    sqlite3, sqlite_vec, np, SentenceTransformer = mods
+
+    db = _semantic_db_path()
+    db.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(db)
+    conn.enable_load_extension(True)
+    sqlite_vec.load(conn)
+    cur = conn.cursor()
+
+    cur.execute("""
+        create table if not exists docs(
+            rowid integer primary key,
+            path text unique,
+            sha256 text not null,
+            updated_at text not null
+        )
+    """)
+    # 384 dims for all-MiniLM-L6-v2
+    cur.execute("create virtual table if not exists vec using vec0(embedding float[384])")
+
+    def iter_md_files():
+        if paths:
+            for p in paths:
+                if p.is_file() and p.suffix == ".md":
+                    yield p
+            return
+        for p in REPO.rglob("*.md"):
+            if "/.git/" in str(p):
+                continue
+            if "/QUARANTINE/" in str(p):
+                continue
+            yield p
+
+    indexed = 0
+    for p in iter_md_files():
+        rel = str(p.relative_to(REPO))
+        txt = p.read_text(errors="replace")
+        import hashlib
+        sha = hashlib.sha256(txt.encode("utf-8", errors="ignore")).hexdigest()
+
+        row = cur.execute("select rowid, sha256 from docs where path=?", (rel,)).fetchone()
+        if row and row[1] == sha:
+            continue
+
+        emb = _semantic_embed(txt[:50_000], SentenceTransformer)
+        emb_bytes = sqlite_vec.serialize_float32(np.asarray(emb, dtype=np.float32))
+
+        if row:
+            rowid = row[0]
+            cur.execute("update docs set sha256=?, updated_at=datetime('now') where rowid=?", (sha, rowid))
+            cur.execute("delete from vec where rowid=?", (rowid,))
+        else:
+            cur.execute("insert into docs(path, sha256, updated_at) values (?,?,datetime('now'))", (rel, sha))
+            rowid = cur.lastrowid
+
+        cur.execute("insert into vec(rowid, embedding) values (?,?)", (rowid, emb_bytes))
+        indexed += 1
+
+    conn.commit()
+    conn.close()
+    print(f"[memory_search] semantic reindex ok: {indexed} docs updated")
+    return indexed
+
+
+def semantic_search(query: str, top: int) -> list[dict]:
+    flags = load_flags()
+    if not flags.semantic:
+        return []
+
+    ok, err, mods = _try_semantic_deps()
+    if not ok:
+        print(f"[memory_search] semantic disabled (deps missing): {err}")
+        return []
+
+    sqlite3, sqlite_vec, np, SentenceTransformer = mods
+    db = _semantic_db_path()
+    if not db.exists():
+        return []
+
+    conn = sqlite3.connect(db)
+    conn.enable_load_extension(True)
+    sqlite_vec.load(conn)
+    cur = conn.cursor()
+
+    qemb = _semantic_embed(query, SentenceTransformer)
+    qbytes = sqlite_vec.serialize_float32(np.asarray(qemb, dtype=np.float32))
+
+    rows = cur.execute(
+        """
+        select docs.path, vec.distance
+        from vec join docs on docs.rowid = vec.rowid
+        where vec.embedding match ? and vec.k = ?
+        order by vec.distance
+        """,
+        (qbytes, top),
+    ).fetchall()
+    conn.close()
+
+    out = []
+    for path, dist in rows:
+        out.append({
+            "filepath": path,
+            "lineno": 1,
+            "text": f"semantic distance={dist:.4f}",
+            "layer_weight": layer_weight(path),
+            "distance": float(dist),
+        })
+    return out
+
+
 def main():
     if not load_flags().search:
         print("[memory_search] disabled via LAMBS_SEARCH_ENABLED=0")
@@ -203,7 +353,14 @@ def main():
     args = parser.parse_args()
 
     if args.reindex or args.reindex_file:
-        print("[memory_search] reindex: Phase 6 — sqlite-vec noch nicht aktiv")
+        if args.reindex_file:
+            target = (REPO / args.reindex_file).resolve()
+            if not target.exists():
+                print(f"[memory_search] reindex-file not found: {args.reindex_file}")
+                return
+            semantic_reindex([target])
+        else:
+            semantic_reindex(None)
         return
 
     if not args.query:
@@ -214,6 +371,19 @@ def main():
         print(f"[memory_search] Hinweis: --expand-hops ist in Phase 1-5 nicht aktiv (Phase 6 Feature).")
 
     hits = grep_search(args.query, args.top)
+
+    # Phase 6: optionally augment with semantic hits.
+    if not args.grep_only:
+        sem_hits = semantic_search(args.query, args.top)
+        if sem_hits:
+            seen = {(h["filepath"], h["lineno"]) for h in hits}
+            for h in sem_hits:
+                key = (h["filepath"], h["lineno"])
+                if key not in seen:
+                    hits.append(h)
+                    seen.add(key)
+            # Keep ordering simple: grep hits first, then semantic additions.
+            hits = hits[: args.top]
 
     output_blocks = []
     total_chars = 0
